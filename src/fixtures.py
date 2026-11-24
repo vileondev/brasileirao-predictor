@@ -126,3 +126,26 @@ def remaining_fixtures(matches: pd.DataFrame, season: int | None = None) -> pd.D
     played = set(zip(s["home_team"], s["away_team"]))
     rows = [(h, a) for h in teams for a in teams if h != a and (h, a) not in played]
     return pd.DataFrame(rows, columns=["home", "away"])
+
+
+SCHEDULE_FILE: Path = config.DATA_RAW / "schedule_2026_manual.csv"
+
+
+def load_schedule(path: Path = SCHEDULE_FILE) -> pd.DataFrame:
+    """Hand-entered 2026 calendar (copied from a public match schedule page).
+
+    Columns: ``round, kickoff, home, away``. Times are local (Brasilia) as shown on
+    the source page; they are only used for display and ordering.
+    """
+    df = pd.read_csv(path)
+    df["kickoff"] = pd.to_datetime(df["date"] + " " + df["time"])
+    return df[["round", "kickoff", "home", "away"]]
+
+
+def attach_schedule(remaining: pd.DataFrame, schedule: pd.DataFrame) -> pd.DataFrame:
+    """Add ``round`` and ``kickoff`` to the remaining matchups and sort chronologically.
+
+    Matchups missing from the schedule keep ``NaT`` and are listed last.
+    """
+    out = remaining.merge(schedule, on=["home", "away"], how="left")
+    return out.sort_values(["kickoff", "home"], na_position="last").reset_index(drop=True)

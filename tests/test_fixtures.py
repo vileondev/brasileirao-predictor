@@ -70,3 +70,18 @@ def test_remaining_fixtures_small_league() -> None:
     rem = fixtures.remaining_fixtures(m)
     assert len(rem) == 4  # 3 teams -> 6 ordered pairs, 2 already played
     assert ("A", "B") not in set(zip(rem["home"], rem["away"]))
+
+
+def test_schedule_covers_every_remaining_matchup() -> None:
+    from src import ingestion
+    rem = fixtures.remaining_fixtures(ingestion.build_interim())
+    sched = fixtures.load_schedule()
+    assert not sched.duplicated(["home", "away"]).any() and sched["kickoff"].notna().all()
+    merged = fixtures.attach_schedule(rem, sched)
+    assert merged["kickoff"].notna().all(), "a remaining matchup is missing from the schedule"
+    assert merged["kickoff"].is_monotonic_increasing and len(merged) == len(rem)
+
+
+def test_schedule_teams_are_canonical() -> None:
+    sched = fixtures.load_schedule()
+    assert set(sched["home"]) | set(sched["away"]) <= predict.CANONICAL_TEAMS

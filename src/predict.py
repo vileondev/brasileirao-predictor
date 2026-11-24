@@ -140,7 +140,8 @@ def predict_fixtures(artifact: dict, fixtures: pd.DataFrame) -> pd.DataFrame:
 
 def _print(res: pd.DataFrame) -> None:
     for r in res.itertuples(index=False):
-        print(f"\n{r.home} x {r.away}   (xG {r.lam_home:.2f} - {r.lam_away:.2f})")
+        when = f"[{r.kickoff}] " if hasattr(r, "kickoff") else ""
+        print(f"\n{when}{r.home} x {r.away}   (xG {r.lam_home:.2f} - {r.lam_away:.2f})")
         print(f"  1X2: {r.p_home:.1%} / {r.p_draw:.1%} / {r.p_away:.1%}   "
               f"Over2.5: {r.p_over_2_5:.1%}   BTTS: {r.p_btts:.1%}")
         print(f"  Placares: {r.top1} | {r.top2} | {r.top3}")
@@ -168,9 +169,10 @@ def main() -> None:
 
     if args.remaining:
         from src import fixtures as api
-        rem = api.remaining_fixtures(ingestion.build_interim())
+        rem = api.attach_schedule(api.remaining_fixtures(ingestion.build_interim()), api.load_schedule())
         res = predict_fixtures(art, rem)
-        print(f"{len(res)} jogos restantes da temporada (sem datas):")
+        res.insert(0, "kickoff", rem["kickoff"].dt.strftime("%d/%m %H:%M").fillna("sem data").to_numpy())
+        print(f"{len(res)} jogos restantes da temporada, em ordem cronologica:")
         _print(res)
         return
     if args.upcoming:

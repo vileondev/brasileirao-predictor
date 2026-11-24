@@ -24,8 +24,8 @@ Requer Python 3.11+ (desenvolvido em 3.13). Os dados brutos já estão em `data/
 | Objetivo | Comando |
 |---|---|
 | Atualizar dados, reajustar o modelo, pontuar o forward test e registrar novas previsões | `python -m src.update` |
-| Prever um jogo | `python -m src.predict --refit --match Flamengo Palmeiras` |
-| Prever os jogos que faltam na temporada (sem datas) | `python -m src.predict --remaining` |
+| Prever um jogo | `python -m src.predict --refit --match Palmeiras Flamengo` |
+| Prever os jogos que faltam na temporada, com data e hora | `python -m src.predict --remaining` |
 | Prever uma lista (CSV com colunas `home,away`) | `python -m src.predict --fixtures fixtures.csv` |
 | Congelar previsões antes dos jogos | `python -m src.forward log` |
 | Pontuar as previsões congeladas | `python -m src.forward score` |
@@ -33,35 +33,65 @@ Requer Python 3.11+ (desenvolvido em 3.13). Os dados brutos já estão em `data/
 Exemplo de saída:
 
 ```text
-Flamengo x Palmeiras   (xG 1.46 - 1.06)
-  1X2: 46.4% / 25.9% / 27.7%   Over2.5: 46.3%   BTTS: 50.2%
-  Placares: 1-1 (12.3%) | 1-0 (11.8%) | 2-1 (9.1%)
+Palmeiras x Flamengo   (xG 1.49 - 1.04)
+  1X2: 47.8% / 25.7% / 26.5%   Over2.5: 46.5%   BTTS: 50.1%
+  Placares: 1-1 (12.2%) | 1-0 (12.0%) | 2-1 (9.2%)
 ```
 
 ## Como ler a saída
 
-Usando o exemplo acima:
+Usando o exemplo acima: Palmeiras x Flamengo, de 21/11/2026, que terminou **1 x 1**. A previsão é a do modelo atual, que já tem esse resultado no treino; serve só para ilustrar o formato.
 
 ```text
-Flamengo x Palmeiras   (xG 1.46 - 1.06)
-  1X2: 46.4% / 25.9% / 27.7%   Over2.5: 46.3%   BTTS: 50.2%
-  Placares: 1-1 (12.3%) | 1-0 (11.8%) | 2-1 (9.1%)
+Palmeiras x Flamengo   (xG 1.49 - 1.04)
+  1X2: 47.8% / 25.7% / 26.5%   Over2.5: 46.5%   BTTS: 50.1%
+  Placares: 1-1 (12.2%) | 1-0 (12.0%) | 2-1 (9.2%)
 ```
 
 | Trecho | O que significa |
 |---|---|
-| `Flamengo x Palmeiras` | O primeiro time é o **mandante**. Inverter a ordem muda o resultado, porque jogar em casa aumenta os gols esperados em cerca de 40% (na média da história, 1,43 gol do mandante contra 0,98 do visitante). |
-| `xG 1.46 - 1.06` | Gols esperados de cada time (mandante - visitante). **Não é o xG de chutes**: é a média de gols que o modelo espera, calculada só com resultados passados. |
-| `1X2: 46.4% / 25.9% / 27.7%` | Probabilidade de vitória do mandante, empate e vitória do visitante, nessa ordem. Somam 100%. |
-| `Over2.5: 46.3%` | Probabilidade de saírem 3 gols ou mais no jogo. |
-| `BTTS: 50.2%` | Probabilidade de os dois times marcarem. |
-| `Placares: 1-1 (12.3%) \| ...` | Os 3 placares exatos mais prováveis, com a probabilidade de cada um (mandante primeiro). |
+| `Palmeiras x Flamengo` | O primeiro time é o **mandante**. Inverter a ordem muda o resultado, porque jogar em casa aumenta os gols esperados em cerca de 40% (na média da história, 1,43 gol do mandante contra 0,98 do visitante). |
+| `xG 1.49 - 1.04` | Gols esperados de cada time (mandante - visitante). **Não é o xG de chutes**: é a média de gols que o modelo espera, calculada só com resultados passados. |
+| `1X2: 47.8% / 25.7% / 26.5%` | Probabilidade de vitória do mandante (Palmeiras), empate e vitória do visitante (Flamengo), nessa ordem. Somam 100%. |
+| `Over2.5: 46.5%` | Probabilidade de saírem 3 gols ou mais no jogo. |
+| `BTTS: 50.1%` | Probabilidade de os dois times marcarem. |
+| `Placares: 1-1 (12.2%) \| ...` | Os 3 placares exatos mais prováveis, com a probabilidade de cada um (mandante primeiro). |
 
 Pontos para não se enganar:
-- **O placar mais provável quase nunca é o mais provável de acontecer.** No exemplo, o 1-1 tem 12,3%, ou seja, a chance de *não* sair 1-1 é de 87,7%. Os 3 placares juntos somam só 33,2%, e o resto se espalha por dezenas de outros placares. Por isso o foco do projeto é nas probabilidades, e não em acertar o placar exato.
-- **O favorito não é o placar.** Aqui o Flamengo é o favorito (46,4%), mas o placar mais provável é um empate. As duas leituras são coerentes: o empate é um único placar, e a vitória do mandante reúne vários (1-0, 2-1, 2-0...).
-- **Probabilidade vira odd justa** dividindo 1 por ela: 46,4% corresponde a uma odd de cerca de 2,16, o empate a 3,86 e o visitante a 3,61. Odds de casas de apostas têm margem e informação que o modelo não tem, então não são comparáveis diretamente.
+- **O placar mais provável quase nunca é o mais provável de acontecer.** No exemplo, o 1-1 tem 12,2%, ou seja, a chance de *não* sair 1-1 é de 87,8%. Os 3 placares juntos somam só 33,4%, e o resto se espalha por dezenas de outros placares. Por isso o foco do projeto é nas probabilidades, e não em acertar o placar exato.
+- **O favorito não é o placar.** Aqui o Palmeiras é o favorito (47,8%), mas o placar mais provável é um empate (1-1, justamente o que aconteceu). As duas leituras são coerentes: o empate é um único placar, e a vitória do mandante reúne vários (1-0, 2-1, 2-0...).
+- **Probabilidade vira odd justa** dividindo 1 por ela: 47,8% corresponde a uma odd de cerca de 2,09, o empate a 3,89 e o visitante a 3,77. Odds de casas de apostas têm margem e informação que o modelo não tem, então não são comparáveis diretamente.
 - **O modelo não conhece escalação nem lesões.** Trate a saída como uma estimativa baseada na força recente dos times, não como certeza.
+
+## Próximos jogos e previsões
+
+Os **21 jogos que faltam** na Série A 2026, em ordem cronológica. As previsões foram congeladas em 24/11/2026, antes das partidas, e são as do forward test (`predictions/2026-11-24_remaining.csv`). O calendário foi digitado à mão a partir de uma página pública de tabela (`data/raw/schedule_2026_manual.csv`); os horários são locais.
+
+| Quando | Jogo (mandante x visitante) | Mandante / Empate / Visitante | Gols esperados | Placar mais provável | Over 2.5 | BTTS |
+|---|---|---|---|---|---|---|
+| Ter, 24/11, 18h (rod. 37) | Chapecoense x Palmeiras | 12% / 19% / **68%** | 0,7–2,1 | 0-2 | 53% | 45% |
+| Qua, 25/11, 20h (rod. 36) | Atlético-MG x Corinthians | 48% / 27% / 25% | 1,4–0,9 | 1-0 | 40% | 45% |
+| Qui, 26/11, 20h (rod. 37) | São Paulo x Remo | **60%** / 23% / 17% | 1,8–0,9 | 1-0 | 49% | 48% |
+| Sex, 27/11, 20h (rod. 37) | Fluminense x Cruzeiro | 44% / 28% / 28% | 1,3–1,0 | 1-0 | 40% | 46% |
+| Sáb, 28/11, 21h (rod. 37) | Botafogo x Bahia | 51% / 25% / 24% | 1,6–1,0 | 1-1 | 49% | 52% |
+| Dom, 29/11, 16h (rod. 37) | Coritiba x Flamengo | 19% / 22% / **59%** | 1,0–1,9 | 0-1 | 54% | 52% |
+| Dom, 29/11, 16h (rod. 37) | Vitória x Santos | 41% / 26% / 32% | 1,4–1,2 | 1-1 | 47% | 51% |
+| Dom, 29/11, 18h30 (rod. 37) | Corinthians x Grêmio | 48% / 26% / 26% | 1,4–1,0 | 1-0 | 43% | 47% |
+| Dom, 29/11, 18h30 (rod. 37) | Internacional x Bragantino | 48% / 26% / 26% | 1,5–1,0 | 1-0 | 45% | 49% |
+| Dom, 29/11, 18h30 (rod. 37) | Mirassol x Athletico-PR | 48% / 26% / 26% | 1,5–1,0 | 1-1 | 47% | 50% |
+| Dom, 29/11, 19h30 (rod. 37) | Atlético-MG x Vasco | **56%** / 23% / 21% | 1,7–1,0 | 1-0 | 50% | 50% |
+| Qua, 02/12, 21h30 (rod. 38) | Athletico-PR x São Paulo | 47% / 27% / 26% | 1,4–1,0 | 1-0 | 41% | 46% |
+| Qua, 02/12, 21h30 (rod. 38) | Bahia x Atlético-MG | 43% / 27% / 30% | 1,4–1,1 | 1-1 | 45% | 50% |
+| Qua, 02/12, 21h30 (rod. 38) | Bragantino x Fluminense | 41% / 27% / 32% | 1,3–1,1 | 1-1 | 43% | 48% |
+| Qua, 02/12, 21h30 (rod. 38) | Cruzeiro x Internacional | 52% / 26% / 22% | 1,5–0,9 | 1-0 | 43% | 46% |
+| Qua, 02/12, 21h30 (rod. 38) | Flamengo x Chapecoense | **87%** / 9% / 4% | 3,2–0,6 | 3-0 | 72% | 42% |
+| Qua, 02/12, 21h30 (rod. 38) | Grêmio x Mirassol | 43% / 26% / 30% | 1,4–1,1 | 1-1 | 46% | 51% |
+| Qua, 02/12, 21h30 (rod. 38) | Palmeiras x Coritiba | **77%** / 15% / 8% | 2,4–0,6 | 2-0 | 58% | 42% |
+| Qua, 02/12, 21h30 (rod. 38) | Remo x Corinthians | 35% / 26% / 39% | 1,2–1,3 | 1-1 | 47% | 51% |
+| Qua, 02/12, 21h30 (rod. 38) | Santos x Botafogo | 42% / 26% / 32% | 1,4–1,2 | 1-1 | 47% | 52% |
+| Qua, 02/12, 21h30 (rod. 38) | Vasco x Vitória | 51% / 24% / 24% | 1,7–1,1 | 1-1 | 51% | 53% |
+
+Em negrito, as probabilidades de 55% ou mais. O placar mais provável tem só 11% a 14% de chance, então olhe as probabilidades de resultado antes do placar. Esta tabela é uma foto: o resultado de cada jogo entra quando o football-data.co.uk atualizar, e `python -m src.update` mostra como as previsões se saíram.
 
 ## Experimentos
 
@@ -81,6 +111,7 @@ Todos reproduzíveis:
 
 - **Fonte:** [football-data.co.uk](https://www.football-data.co.uk/brazil.php) (`BRA.csv`): Série A de 2012 a 2026, cerca de 5.700 jogos, com resultados e odds de fechamento. Não tem xG, chutes nem escalações.
 - Um jogo nunca disputado (Chapecoense x Atlético-MG, 2016, após o acidente aéreo) é descartado na ingestão.
+- O calendário dos jogos restantes de 2026 está em `data/raw/schedule_2026_manual.csv`, digitado à mão a partir de uma página pública (horário local). Quando a temporada acabar, ele deixa de ser necessário; para 2027 é preciso preencher um novo.
 - A API-Football (plano grátis) só libera as temporadas 2022–2024, então não é usada para jogos futuros. A chave, se usada, fica em um `.env` fora do Git (`API_FOOTBALL_KEY`).
 
 ## Resultados (walk-forward 2016–2025, RPS: menor é melhor)
@@ -131,7 +162,7 @@ predictions/     previsões congeladas (forward test)
 src/             ingestion, features, baselines, probability, backtest, train,
                  stacking, stacked, shrinkage, dispersion, calibration, predict, fixtures,
                  forward, update
-tests/           64 testes (vazamento, matriz soma 1, ingestão, inferência, update, forward)
+tests/           66 testes (vazamento, matriz soma 1, ingestão, inferência, update, forward)
 CLAUDE.md        especificação do projeto, decisões e registro de resultados
 ```
 
