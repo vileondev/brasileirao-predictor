@@ -6,38 +6,6 @@ O modelo de produção é um **Dixon-Coles** com decaimento temporal (Poisson pa
 
 > **Resumo honesto:** o modelo fica cerca de 0,007 de RPS atrás das odds de fechamento. Não há evidência de vantagem para apostas.
 
-## TODO: o que você precisa correr atrás
-
-Itens que dependem de **você** (decisão, conta, dado ou espera). O que eu posso fazer quando você pedir está na última coluna.
-
-### Já, esta semana
-- [x] **Enviar os commits ao GitHub** (feito em 24/11/2026; lembrar de repetir o `git push` a cada novo commit, principalmente os das previsões congeladas).
-- [ ] **Depois dos jogos das rodadas 36–38** (24/11 a 02/12/2026): baixar o CSV novo do football-data.co.uk e rodar `python -m src.update`. Ele pontua as 21 previsões congeladas. *Com 21 jogos é só acompanhamento, não conclui nada.*
-- [ ] **Revisar o protocolo** (`docs/PROTOCOLO.md`): cortar, trocar ou acrescentar hipóteses (H1 a H5), tirar o aviso de "RASCUNHO" e commitar. Só vale como pré-registro depois do commit.
-
-### Decisões
-- [ ] **Escopo do protocolo:** continuar só com o Brasileirão (precisa de 2027 inteiro, cerca de 400 jogos, e ainda com poder de cerca de 65%) ou aplicar o mesmo protocolo a outras ligas do football-data.co.uk para ganhar poder mais rápido.
-- [ ] **Dados de jogador:** decidir se vale insistir. O que sobrou é uma fonte gratuita **permitida** de lesões e escalações da temporada atual (por exemplo, as súmulas da CBF: conferir os termos antes). O Transfermarkt e o FBref estão fora (bloqueiam robôs de IA), e a API-Football grátis não libera 2025 e 2026.
-
-### Verificações de termos de uso (só você pode fazer)
-- [ ] **Base dos Dados** (basedosdados.org): confirmar fonte e licença da tabela `stats.csv`. Hoje ela fica fora do Git (`data/external/`) por isso.
-- [ ] **Globo Esporte:** a tabela `matches.csv` do `williamorim/brasileirao` vem de scraping dele; os termos de uso não foram verificados.
-- [ ] **football-data.co.uk:** conferir se pode redistribuir o CSV (`data/raw/`) num repositório público.
-
-### Antes da temporada 2027
-- [ ] **Calendário:** preencher um novo `data/raw/schedule_*_manual.csv` (ou confirmar que o scraper do `williamorim/brasileirao` ganhou a função de 2027).
-- [ ] **Times promovidos:** acrescentar os nomes novos em `TEAM_MAP` (`src/config.py`); o `python -m src.update` avisa se faltar algum.
-- [ ] **Rodar `python -m src.update` antes de cada rodada**, para congelar as previsões e commitá-las antes dos jogos (o carimbo do commit é a prova).
-- [ ] **Análise final do protocolo** só com pelo menos 548 jogos registrados (ou ao fim da temporada 2027).
-
-### O que eu posso fazer quando você pedir
-- Registrar o hash do CSV e o commit do código em cada previsão congelada (`src/forward.py`), e as versões das bibliotecas.
-- Ligar o calendário automático (`matches.csv` externo) ao `python -m src.update`, se você aprovar os termos.
-- Rodar de novo qualquer experimento quando houver dado novo (a infraestrutura de backtest e de auditoria já existe).
-- Aplicar o protocolo a outras ligas, se você escolher esse caminho.
-
-> Nota: se a API-Football falhar com erro de DNS, a causa é o DNS do provedor; trocar para `1.1.1.1` e `8.8.8.8` resolve.
-
 ## Probabilidades, não odds
 
 O modelo não prevê as odds das casas de apostas: ele prevê **probabilidades** (a odd justa é 1 dividido pela probabilidade). Uma única matriz de placares dá o 1X2, o Over 2.5, o BTTS e os placares mais prováveis, e permite medir a qualidade com RPS, log-loss e calibração. As odds de fechamento entram só como régua de comparação. Como o modelo é pior que o mercado, uma probabilidade muito diferente da odd de mercado deve ser lida como alerta de informação que falta (lesão, escalação reserva), e não como oportunidade de aposta.
@@ -199,6 +167,33 @@ CLAUDE.md        especificação do projeto, decisões e registro de resultados
 ```
 
 Modelos treinados (`models/`) e arquivos gerados (`data/interim/`, `reports/`) não vão para o Git; `python -m src.update` os recria.
+
+## TODO: o que você precisa correr atrás
+
+Itens que dependem de **mim** (decisão, conta, dado ou espera).
+
+### Já, esta semana
+- [x] **Enviar os commits ao GitHub** (feito em 24/11/2026; lembrar de repetir o `git push` a cada novo commit, principalmente os das previsões congeladas).
+- [ ] **Depois dos jogos das rodadas 36–38** (24/11 a 02/12/2026): baixar o CSV novo do football-data.co.uk e rodar `python -m src.update`. Ele pontua as 21 previsões congeladas. *Com 21 jogos é só acompanhamento, não conclui nada.*
+- [ ] **Revisar o protocolo** (`docs/PROTOCOLO.md`): cortar, trocar ou acrescentar hipóteses (H1 a H5), tirar o aviso de "RASCUNHO" e commitar. Só vale como pré-registro depois do commit.
+
+### Decisões
+- [ ] **Escopo do protocolo:** continuar só com o Brasileirão (precisa de 2027 inteiro, cerca de 400 jogos, e ainda com poder de cerca de 65%) ou aplicar o mesmo protocolo a outras ligas do football-data.co.uk para ganhar poder mais rápido.
+- [ ] **Dados de jogador:** decidir se vale insistir. O que sobrou é uma fonte gratuita **permitida** de lesões e escalações da temporada atual (por exemplo, as súmulas da CBF: conferir os termos antes). O Transfermarkt e o FBref estão fora (bloqueiam robôs de IA), e a API-Football grátis não libera 2025 e 2026.
+
+### Verificações de termos de uso (só eu posso fazer)
+- [ ] **Base dos Dados** (basedosdados.org): confirmar fonte e licença da tabela `stats.csv`. Hoje ela fica fora do Git (`data/external/`) por isso.
+- [ ] **Globo Esporte:** a tabela `matches.csv` do `williamorim/brasileirao` vem de scraping dele; os termos de uso não foram verificados.
+- [ ] **football-data.co.uk:** conferir se pode redistribuir o CSV (`data/raw/`) num repositório público.
+
+### Antes da temporada 2027
+- [ ] **Calendário:** preencher um novo `data/raw/schedule_*_manual.csv` (ou confirmar que o scraper do `williamorim/brasileirao` ganhou a função de 2027).
+- [ ] **Times promovidos:** acrescentar os nomes novos em `TEAM_MAP` (`src/config.py`); o `python -m src.update` avisa se faltar algum.
+- [ ] **Rodar `python -m src.update` antes de cada rodada**, para congelar as previsões e commitá-las antes dos jogos (o carimbo do commit é a prova).
+- [ ] **Análise final do protocolo** só com pelo menos 548 jogos registrados (ou ao fim da temporada 2027).
+
+> Nota: se a API-Football falhar com erro de DNS, a causa é o DNS do provedor; trocar para `1.1.1.1` e `8.8.8.8` resolve.
+
 
 ## Aviso
 
