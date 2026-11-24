@@ -38,7 +38,34 @@ Flamengo x Palmeiras   (xG 1.46 - 1.06)
   Placares: 1-1 (12.3%) | 1-0 (11.8%) | 2-1 (9.1%)
 ```
 
-Experimentos (todos reproduzíveis):
+## Como ler a saída
+
+Usando o exemplo acima:
+
+```text
+Flamengo x Palmeiras   (xG 1.46 - 1.06)
+  1X2: 46.4% / 25.9% / 27.7%   Over2.5: 46.3%   BTTS: 50.2%
+  Placares: 1-1 (12.3%) | 1-0 (11.8%) | 2-1 (9.1%)
+```
+
+| Trecho | O que significa |
+|---|---|
+| `Flamengo x Palmeiras` | O primeiro time é o **mandante**. Inverter a ordem muda o resultado, porque jogar em casa aumenta os gols esperados em cerca de 40% (na média da história, 1,43 gol do mandante contra 0,98 do visitante). |
+| `xG 1.46 - 1.06` | Gols esperados de cada time (mandante - visitante). **Não é o xG de chutes**: é a média de gols que o modelo espera, calculada só com resultados passados. |
+| `1X2: 46.4% / 25.9% / 27.7%` | Probabilidade de vitória do mandante, empate e vitória do visitante, nessa ordem. Somam 100%. |
+| `Over2.5: 46.3%` | Probabilidade de saírem 3 gols ou mais no jogo. |
+| `BTTS: 50.2%` | Probabilidade de os dois times marcarem. |
+| `Placares: 1-1 (12.3%) \| ...` | Os 3 placares exatos mais prováveis, com a probabilidade de cada um (mandante primeiro). |
+
+Pontos para não se enganar:
+- **O placar mais provável quase nunca é o mais provável de acontecer.** No exemplo, o 1-1 tem 12,3%, ou seja, a chance de *não* sair 1-1 é de 87,7%. Os 3 placares juntos somam só 33,2%, e o resto se espalha por dezenas de outros placares. Por isso o foco do projeto é nas probabilidades, e não em acertar o placar exato.
+- **O favorito não é o placar.** Aqui o Flamengo é o favorito (46,4%), mas o placar mais provável é um empate. As duas leituras são coerentes: o empate é um único placar, e a vitória do mandante reúne vários (1-0, 2-1, 2-0...).
+- **Probabilidade vira odd justa** dividindo 1 por ela: 46,4% corresponde a uma odd de cerca de 2,16, o empate a 3,86 e o visitante a 3,61. Odds de casas de apostas têm margem e informação que o modelo não tem, então não são comparáveis diretamente.
+- **O modelo não conhece escalação nem lesões.** Trate a saída como uma estimativa baseada na força recente dos times, não como certeza.
+
+## Experimentos
+
+Todos reproduzíveis:
 
 | Experimento | Comando |
 |---|---|
