@@ -53,7 +53,7 @@ Dados de 2016–2025: o desvio-padrão da diferença pareada de RPS entre o Dixo
 **Conclusões práticas:**
 1. O teste forward de 21 jogos **não consegue** confirmar nem refutar nada sobre a lacuna de 0,0076. Serve só para checar que o pipeline funciona.
 2. Para H1 é preciso cerca de 550 jogos: a temporada 2027 inteira (380) mais 2026 restante (21) dá 401, ou seja, cerca de 65% de poder. Com 2028, passa de 780.
-3. Melhorias de modelo menores que ~0,005 de RPS **não são resolvíveis** com uma liga. Ficar ajustando modelo abaixo disso é explorar ruído. Só vale tentar ideias com ganho esperado de 0,01 ou mais, como informação nova (escalações, lesões).
+3. **O desvio da diferença pareada depende de quão parecidos são os modelos**, e a tabela acima vale só para comparações com o mercado ou com modelos muito diferentes (DC contra odds, Elo ou GBM: desvio de 0,05 a 0,06). Para um ajuste aninhado, como somar uma variável ao Dixon-Coles (DC contra DC + valor do time titular), o desvio medido foi **0,0114**: bastam cerca de 115 jogos para detectar 0,003 e cerca de 1.600 para detectar 0,0008. *(Correção: a versão anterior deste item dizia que melhorias abaixo de 0,005 não eram resolvíveis com uma liga; isso só vale para modelos muito diferentes.)* Ainda assim, um efeito pequeno detectável não é um efeito relevante: ganhos de 0,001 de RPS não aproximam o modelo do mercado (lacuna de 0,0076).
 4. Alternativa para aumentar n: aplicar o mesmo protocolo a outras ligas que o football-data.co.uk cobre (exige decisão sua; mudaria o escopo).
 
 ## 5. Plano do teste forward
@@ -66,7 +66,7 @@ Dados de 2016–2025: o desvio-padrão da diferença pareada de RPS entre o Dixo
 
 ## 6. Regras contra p-hacking e deriva
 1. **Uma versão de modelo por vez no forward.** Trocar modelo, hiperparâmetro ou janela durante o teste só vale como **nova versão** (`MODEL_TAG` novo), avaliada em separado e sem substituir a original.
-2. Variantes novas precisam de hipótese e efeito esperado **antes** de rodar, e só se o efeito esperado for ≥ 0,01 de RPS (seção 4).
+2. Variantes novas precisam de hipótese e efeito esperado **antes** de rodar, com o tamanho de amostra necessário calculado a partir do desvio da diferença pareada esperado (seção 4, item 3).
 3. Todo experimento exploratório continua permitido, mas é registrado no CLAUDE.md como exploratório, com o número de comparações feitas.
 4. Os resultados de 2016–2025 não são reutilizados como evidência confirmatória.
 5. Resultados nulos e negativos são publicados da mesma forma que os positivos.

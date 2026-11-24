@@ -110,3 +110,17 @@ KNOWN_CHAMPIONS: dict[int, tuple[str, int | None]] = {
     2021: ("Atletico-MG", 84), 2022: ("Palmeiras", 81), 2023: ("Palmeiras", 70),
     2024: ("Botafogo", 79), 2025: ("Flamengo", None),
 }
+
+
+# ----------------------------------------------------------------------------- #
+# External tables audit (src/eda_external.py)
+# ----------------------------------------------------------------------------- #
+EXTERNAL_DIR: Path = ROOT / "data" / "external" / "williamorim_brasileirao"
+EXTERNAL_STATS_FILE: Path = EXTERNAL_DIR / "stats.csv"
+EXTERNAL_MATCHES_FILE: Path = EXTERNAL_DIR / "matches.csv"
+EXTERNAL_REPORT_FILE: Path = REPORTS_DIR / "eda_external.md"
+EXT_AGE_RANGE: tuple[float, float] = (18.0, 40.0)     # plausible mean age of a starting XI (years)
+EXT_FOULS_MAX: int = 60                               # fouls by one team in one match above this are implausible
+EXT_VALUE_RANGE: tuple[float, float] = (1e4, 5e8)     # plausible starting-XI market value (currency units)
+EXT_COVERAGE_MIN_PCT: float = 75.0                    # seasons at least this filled count as "covered"
+EXT_FIRST_SEASON: int = 2012                          # overlap with our base starts here
