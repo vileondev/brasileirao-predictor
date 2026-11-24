@@ -63,3 +63,50 @@ TEAM_MAP: dict[str, str] = {
     "Vasco": "Vasco",
     "Vitoria": "Vitoria",
 }
+
+
+# ----------------------------------------------------------------------------- #
+# EDA / data-quality audit (src/eda.py)
+# ----------------------------------------------------------------------------- #
+REPORTS_DIR: Path = ROOT / "reports"
+FIGURES_DIR: Path = REPORTS_DIR / "figures"
+EDA_REPORT_FILE: Path = REPORTS_DIR / "eda_report.md"
+CROSSCHECK_REPORT_FILE: Path = REPORTS_DIR / "crosscheck.md"
+FIG_DPI: int = 300
+
+IQR_FENCE_STANDARD: float = 1.5
+IQR_FENCE_EXTREME: float = 3.0
+Z_THRESHOLD: float = 3.0
+MODIFIED_Z_THRESHOLD: float = 3.5
+MAD_NORMAL_CONSTANT: float = 0.6745      # makes MAD comparable to a standard deviation
+MEAN_AD_NORMAL_CONSTANT: float = 1.253314  # fallback scale when MAD == 0
+ISOLATION_CONTAMINATION: float = 0.01
+ISOLATION_TREES: int = 300
+LOF_NEIGHBORS: int = 35
+TOP_EXTREME_MATCHES: int = 10
+
+MIN_SEASONS_PER_TEAM: int = 3
+BOXPLOT_TEAMS: int = 8
+MODE_DECIMALS: int = 2
+SKEW_SYMMETRIC: float = 0.5
+SKEW_STRONG: float = 1.0
+POISSON_TAIL_POOL: int = 5               # goal counts >= this are pooled in the chi-square test
+MISSING_ALPHA: float = 0.05
+MISSING_ALPHA_STRICT: float = 0.01
+MIN_GROUP_FOR_TESTS: int = 5
+
+MAX_PLAUSIBLE_TEAM_GOALS: int = 10
+MAX_PLAUSIBLE_TOTAL_GOALS: int = 12
+OVERROUND_RANGE: tuple[float, float] = (1.0, 1.20)
+GAMES_PER_TEAM_SEASON: int = 38
+TEAMS_PER_SEASON: int = 20
+TOP_TEAMS_FOR_CHAMPION_CHECK: int = 1
+
+#: Public record (season label -> champion canonical name, final points; None = points not asserted).
+KNOWN_CHAMPIONS: dict[int, tuple[str, int | None]] = {
+    2012: ("Fluminense", 77), 2013: ("Cruzeiro", 76), 2014: ("Cruzeiro", 80),
+    2015: ("Corinthians", 81), 2016: ("Palmeiras", 80), 2017: ("Corinthians", 72),
+    2018: ("Palmeiras", 80), 2019: ("Flamengo", 90), 2020: ("Flamengo", 71),
+    2021: ("Atletico-MG", 84), 2022: ("Palmeiras", 81), 2023: ("Palmeiras", 70),
+    2024: ("Botafogo", 79), 2025: ("Flamengo", None),
+}

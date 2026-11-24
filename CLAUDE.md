@@ -59,7 +59,9 @@ Consequences:
 │   ├── stacked.py            # team-perspective stacked GBM (experiment)
 │   ├── shrinkage.py          # ridge / lambda-shrinkage grid (experiment)
 │   ├── dispersion.py         # Poisson vs Negative Binomial (experiment)
-│   └── calibration.py        # reliability tables and plots
+│   ├── calibration.py        # reliability tables and plots
+│   ├── eda.py                # data-quality audit + EDA report and figures (read-only on data/raw)
+│   └── crosscheck.py         # compare scores with API-Football (seasons 2022-2024)
 ├── predictions/              # frozen forward-test logs (committed)
 ├── models/                   # artifacts + feature column order (git-ignored)
 ├── tests/                    # leakage, matrix sum=1, ingestion, inference, update, forward
@@ -121,6 +123,8 @@ Consequences:
 - Production rho is now out-of-sample: `predict.fit_production` fits rho on walk-forward DC lambdas of the last `RHO_SEASONS=6` seasons (-0.001) and stores `rho_in_sample` (+0.011) for reference; effect on the 21 remaining matchups <= 0.3 pp. `dc_oos_lambdas` lives in baselines.py so inference does not import lightgbm.
 - Repository is PUBLIC (github.com/vileondev/brasileirao-predictor); history scanned for secrets before publishing (none). `.env` and `models/` are git-ignored. data/raw holds a copy of the football-data.co.uk CSV: check their terms before redistributing elsewhere.
 - Calendar of the 21 remaining 2026 matches is hand-entered in `data/raw/schedule_2026_manual.csv` (from public schedule screenshots, local times; round 36 postponed game + rounds 37-38). All 21 inferred matchups (`fixtures.remaining_fixtures`) matched the real calendar, home/away included, which validates the double-round-robin inference. `predict --remaining` now prints dates in chronological order; tests require every remaining matchup to be in the schedule. For 2027 a new schedule file must be filled in.
+- Data audit / EDA (`python -m src.eda` -> `reports/eda_report.md` + 4 figures in `reports/figures/`; spec in EDA_SPEC.md; read-only on data/raw, warning-free, tested in `tests/test_eda.py`). FINDINGS: file has 5679 rows x 32 cols (25 named + 7 empty), 15 seasons, 5678 played matches; zero duplicates, negative goals, `Res` inconsistencies or team-name drift; champion AND points match the public record for 2012-2024 (14/14 incl. 2025 champion); Pinnacle odds missing in 7.1% (MAR: depends on Season), Bet365/Betfair only partially covered (source coverage, unused). Source defects, none affecting the model: `MaxCA=0.00` in Cruzeiro x Fortaleza 27/10/2019 plus 6 atypical `Max*` prices (Max* columns are unused). 10 `Time` values have a leading space (stripped). Kickoff Time is almost certainly UTC (25% of kickoffs fall 00:00-05:59). Goals: no overdispersion (VMR HG 0.944, AG 0.999; conditional on teams 0.902/0.985); HG is slightly UNDER-dispersed (chi-square fit p=0.009), AG fits Poisson (p=0.471). Home advantage +0.45 goals/game, no significant trend (p=0.085). Year-to-year persistence of team scoring/conceding r~0.38/0.41 (supports time decay).
+- Cross-source check (`python -m src.crosscheck` -> `reports/crosscheck.md`, 3 API requests, seasons 2022-2024 only on the free plan): 1140/1140 matches paired with API-Football, 0 score differences, 0 dates >1 day apart. Strong evidence the scores are real. (Needed alias `fortaleza ec` -> Fortaleza in predict.ALIASES.)
 - Player-level data (squad value, absences, lineups) DEFERRED. Transfermarkt's robots.txt blocks AI crawlers (incl. ClaudeBot), so it is NOT scraped. Revisit only via a source with explicit permission (official API with key, open-licensed dataset). Compare against the baselines above if added.
 
 ## 11. Verification (run before declaring any step done)

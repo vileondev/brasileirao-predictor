@@ -29,6 +29,7 @@ ALIASES: dict[str, str] = {
     "atletico goianiense": "Atletico-GO", "america mineiro": "America-MG",
     "sport recife": "Sport", "clube do remo": "Remo", "chapecoense sc": "Chapecoense",
     "botafogo rj": "Botafogo", "flamengo rj": "Flamengo", "gremio fbpa": "Gremio",
+    "fortaleza ec": "Fortaleza",
 }
 
 
