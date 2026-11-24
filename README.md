@@ -6,6 +6,10 @@ O modelo de produção é um **Dixon-Coles** com decaimento temporal (Poisson pa
 
 > **Resumo honesto:** o modelo fica cerca de 0,007 de RPS atrás das odds de fechamento. Não há evidência de vantagem para apostas.
 
+## Probabilidades, não odds
+
+O modelo não prevê as odds das casas de apostas: ele prevê **probabilidades** (a odd justa é 1 dividido pela probabilidade). Uma única matriz de placares dá o 1X2, o Over 2.5, o BTTS e os placares mais prováveis, e permite medir a qualidade com RPS, log-loss e calibração. As odds de fechamento entram só como régua de comparação. Como o modelo é pior que o mercado, uma probabilidade muito diferente da odd de mercado deve ser lida como alerta de informação que falta (lesão, escalação reserva), e não como oportunidade de aposta.
+
 ## Instalação
 
 ```powershell
@@ -41,6 +45,7 @@ Experimentos (todos reproduzíveis):
 | Baselines e backtest walk-forward | `python -m src.backtest` |
 | LightGBM Poisson com Optuna | `python -m src.train` |
 | GBM sobre o Dixon-Coles (offset) | `python -m src.stacking` |
+| Modelo empilhado time contra adversário | `python -m src.stacked` |
 | Encolhimento dos λs | `python -m src.shrinkage` |
 | Poisson contra Binomial Negativa | `python -m src.dispersion` |
 | Calibração (1X2 e Over 2.5) | `python -m src.calibration` |
@@ -60,14 +65,19 @@ Experimentos (todos reproduzíveis):
 | **Dixon-Coles (produção)** | **0,2081** | 1,022 |
 | Elo + Poisson | 0,2082 | 1,024 |
 | GBM com offset do Dixon-Coles | 0,2080 | 1,022 |
+| Empilhado time x adversário, com offset do Dixon-Coles | 0,2083 | 1,023 |
+| Empilhado time x adversário, puro | 0,2101 | 1,029 |
 | LightGBM Poisson (53 features) | 0,2107 | 1,030 |
 | Frequências históricas | 0,2188 | 1,054 |
 
 O que testamos e **não** melhorou o Dixon-Coles (intervalos de confiança incluem zero ou pioram):
 - LightGBM com 53 features de forma, descanso, H2H e Elo.
 - LightGBM usando o Dixon-Coles como base.
+- Modelo único empilhado (duas linhas por jogo, uma por time): dobrar as linhas de treino não ajuda.
 - Encolhimento dos λs (ridge, meia-vida, α).
-- Binomial Negativa: os gols não têm sobredispersão (a dispersão ajustada é ~0), e o ρ saiu positivo (+0,01 a +0,02), ao contrário das ligas europeias.
+- Binomial Negativa: os gols não têm sobredispersão (a dispersão ajustada é ~0).
+
+Sobre o ρ do Dixon-Coles: ele é pequeno e depende da janela usada (de +0,03 a +0,10 nas primeiras temporadas, −0,001 nas últimas 6, +0,011 no ajuste dentro da amostra). Nunca chega aos valores negativos das ligas europeias, ou seja, não há excesso de empates de placar baixo. A produção usa a estimativa fora da amostra das últimas 6 temporadas.
 
 Calibração: o 1X2 está bem calibrado (erro médio 0,015, contra 0,013 das odds). O Over 2.5 é um pouco otimista nas probabilidades altas.
 
@@ -92,8 +102,9 @@ Calibração: o 1X2 está bem calibrado (erro médio 0,015, contra 0,013 das odd
 data/raw/        dados brutos imutáveis
 predictions/     previsões congeladas (forward test)
 src/             ingestion, features, baselines, probability, backtest, train,
-                 stacking, shrinkage, dispersion, calibration, predict, forward, update
-tests/           60 testes (vazamento, matriz soma 1, ingestão, inferência, update)
+                 stacking, stacked, shrinkage, dispersion, calibration, predict, fixtures,
+                 forward, update
+tests/           64 testes (vazamento, matriz soma 1, ingestão, inferência, update, forward)
 CLAUDE.md        especificação do projeto, decisões e registro de resultados
 ```
 
