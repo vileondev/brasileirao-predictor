@@ -214,3 +214,42 @@ class DixonColes:
         aa = df["away_team"].map(lambda t: self.att.get(t, 0.0)).to_numpy()
         da = df["away_team"].map(lambda t: self.dfn.get(t, 0.0)).to_numpy()
         return (np.exp(self.mu + self.gamma + ah - da), np.exp(self.mu + aa - dh))
+
+
+def dc_oos_lambdas(
+    matches: pd.DataFrame, start_season: int | None = None,
+    block: int = 20, half_life_days: float = 730.0, ridge: float = 0.5,
+) -> pd.DataFrame:
+    """Out-of-sample Dixon-Coles lambdas for every match from ``start_season`` on.
+
+    Each block of ``block`` matches is predicted by a model fitted on matches that
+    kicked off strictly before the block's first match.
+
+    Parameters
+    ----------
+    matches : pd.DataFrame
+        Clean matches (``match_id, season, kickoff, home_team, away_team, ...``).
+    start_season : int, optional
+        First season to predict (default: first season after the warm-up seasons).
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``match_id, dc_lh, dc_la``.
+    """
+    from src import config
+
+    start_season = start_season if start_season is not None else max(config.WARMUP_SEASONS) + 1
+    rows = []
+    for season in sorted(matches["season"].unique()):
+        if season < start_season:
+            continue
+        sdf = matches[matches["season"] == season]
+        for start in range(0, len(sdf), block):
+            chunk = sdf.iloc[start:start + block]
+            ref = chunk["kickoff"].iloc[0]
+            dc = DixonColes(half_life_days, ridge).fit(matches[matches["kickoff"] < ref], ref)
+            lh, la = dc.predict(chunk)
+            rows.append(pd.DataFrame({"match_id": chunk["match_id"].to_numpy(),
+                                      "dc_lh": lh, "dc_la": la}))
+    return pd.concat(rows, ignore_index=True)

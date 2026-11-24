@@ -35,28 +35,7 @@ OFFSET_PARAMS: dict = {
 }
 
 
-def dc_oos_lambdas(
-    matches: pd.DataFrame, start_season: int = TRAIN_FLOOR_SEASON,
-    block: int = 20, half_life_days: float = 730.0, ridge: float = 0.5,
-) -> pd.DataFrame:
-    """Out-of-sample Dixon-Coles lambdas for every match from ``start_season`` on.
-
-    Each block of ``block`` matches is predicted by a model fitted on matches that
-    kicked off strictly before the block's first match.
-    """
-    rows = []
-    for season in sorted(matches["season"].unique()):
-        if season < start_season:
-            continue
-        sdf = matches[matches["season"] == season]
-        for start in range(0, len(sdf), block):
-            chunk = sdf.iloc[start:start + block]
-            ref = chunk["kickoff"].iloc[0]
-            dc = baselines.DixonColes(half_life_days, ridge).fit(matches[matches["kickoff"] < ref], ref)
-            lh, la = dc.predict(chunk)
-            rows.append(pd.DataFrame({"match_id": chunk["match_id"].to_numpy(),
-                                      "dc_lh": lh, "dc_la": la}))
-    return pd.concat(rows, ignore_index=True)
+dc_oos_lambdas = baselines.dc_oos_lambdas  # moved to baselines so predict.py need not import lightgbm
 
 
 def add_dc(feat: pd.DataFrame, dc: pd.DataFrame) -> pd.DataFrame:

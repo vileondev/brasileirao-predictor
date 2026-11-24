@@ -18,6 +18,7 @@ from src import baselines, config, ingestion, probability
 
 MODEL_FILE: Path = config.MODELS_DIR / "dc_production.json"
 CANONICAL_TEAMS: frozenset[str] = frozenset(config.TEAM_MAP.values())
+RHO_SEASONS: int = 6  # seasons of out-of-sample predictions used to estimate rho
 
 
 #: extra spellings seen in other sources (API-Football etc.), normalized form -> canonical
@@ -59,19 +60,32 @@ def resolve_team(name: str) -> str:
 
 
 def fit_production(matches: pd.DataFrame, half_life_days: float = 730.0) -> dict:
-    """Fit Dixon-Coles on all played matches and estimate ``rho`` (training data).
+    """Fit Dixon-Coles on all played matches and estimate ``rho`` out-of-sample.
+
+    ``rho`` is fitted on walk-forward (out-of-sample) lambdas of the last
+    ``RHO_SEASONS`` seasons, so it is not biased by predictions of matches the
+    model was trained on. The in-sample estimate is kept for reference.
 
     Returns
     -------
     dict
-        JSON-serializable artifact: model parameters, ``rho`` and training metadata.
+        JSON-serializable artifact: model parameters, ``rho``, ``rho_in_sample``
+        and training metadata.
     """
     ref = matches["kickoff"].max() + pd.Timedelta(1, unit="D")
     dc = baselines.DixonColes(half_life_days).fit(matches, ref)
+    hg, ag = matches["home_goals"].to_numpy(), matches["away_goals"].to_numpy()
     lh, la = dc.predict(matches)
-    rho = probability.fit_rho(lh, la, matches["home_goals"].to_numpy(), matches["away_goals"].to_numpy())
-    return {"model": dc.to_dict(), "rho": rho, "trained_through": str(matches["kickoff"].max()),
-            "n_matches": int(len(matches))}
+    rho_in = probability.fit_rho(lh, la, hg, ag)
+
+    seasons = sorted(matches["season"].unique())
+    start = int(seasons[max(1, len(seasons) - RHO_SEASONS)]) if len(seasons) > 1 else int(seasons[0])
+    oos = baselines.dc_oos_lambdas(matches, start_season=start, half_life_days=half_life_days)
+    m = matches.merge(oos, on="match_id")
+    rho = probability.fit_rho(m["dc_lh"].to_numpy(), m["dc_la"].to_numpy(),
+                              m["home_goals"].to_numpy(), m["away_goals"].to_numpy()) if len(m) else rho_in
+    return {"model": dc.to_dict(), "rho": rho, "rho_in_sample": rho_in,
+            "trained_through": str(matches["kickoff"].max()), "n_matches": int(len(matches))}
 
 
 def save_artifact(artifact: dict, path: Path = MODEL_FILE) -> None:
