@@ -94,3 +94,29 @@ def test_backtest_predictions_ignore_future(matches: pd.DataFrame) -> None:
         assert len(a) == 100 or model == "dixon_coles" and len(a) >= 100
         cols = ["p_home", "p_draw", "p_away"]
         assert np.allclose(a[cols].to_numpy(), b.loc[a.index, cols].to_numpy(), atol=1e-9), model
+
+
+# ---- negative binomial ------------------------------------------------------ #
+
+def test_negbin_matrix_valid_and_reduces_to_poisson() -> None:
+    lh, la = np.array([1.2, 2.5]), np.array([0.8, 1.1])
+    nb = probability.scoreline_matrix(lh, la, -0.05, alpha=0.3)
+    assert np.allclose(nb.sum(axis=(1, 2)), 1.0, atol=1e-6) and (nb >= 0).all()
+    assert np.allclose(probability.scoreline_matrix(lh, la, -0.05, alpha=1e-12),
+                       probability.scoreline_matrix(lh, la, -0.05), atol=1e-9)
+    # overdispersion fattens both tails relative to Poisson
+    pois = probability.scoreline_matrix(lh, la, 0.0)
+    wide = probability.scoreline_matrix(lh, la, 0.0, alpha=0.5)
+    assert wide[0, 0, 0] > pois[0, 0, 0]
+
+
+def test_fit_alpha_recovers_dispersion_and_poisson() -> None:
+    rng = np.random.default_rng(1)
+    lam = rng.uniform(0.8, 2.2, 20000)
+    true_alpha = 0.25
+    r = 1 / true_alpha
+    y = rng.negative_binomial(r, r / (r + lam))
+    est = probability.fit_alpha(lam[:10000], lam[10000:], y[:10000], y[10000:])
+    assert est == pytest.approx(true_alpha, abs=0.04)
+    yp = rng.poisson(lam)
+    assert probability.fit_alpha(lam[:10000], lam[10000:], yp[:10000], yp[10000:]) < 0.03

@@ -3,9 +3,36 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.optimize import minimize_scalar
-from scipy.stats import poisson
+from scipy.stats import nbinom, poisson
 
 from src import config
+
+
+def _marginal(goals: np.ndarray, lam: np.ndarray, alpha: float) -> np.ndarray:
+    """Goal pmf ``(N, K)``: Poisson if ``alpha`` ~ 0, else Negative Binomial with mean ``lam``."""
+    if alpha < 1e-9:
+        return poisson.pmf(goals[None, :], lam[:, None])
+    r = 1.0 / alpha
+    return nbinom.pmf(goals[None, :], r, r / (r + lam[:, None]))
+
+
+def fit_alpha(
+    lam_home: np.ndarray, lam_away: np.ndarray,
+    home_goals: np.ndarray, away_goals: np.ndarray,
+    bounds: tuple[float, float] = (1e-6, 0.6),
+) -> float:
+    """Maximum-likelihood Negative-Binomial dispersion (both sides pooled) given lambdas.
+
+    Returns a value near ``bounds[0]`` when the data show no overdispersion.
+    """
+    lam = np.r_[lam_home, lam_away].astype(float)
+    y = np.r_[home_goals, away_goals].astype(float)
+
+    def nll(alpha: float) -> float:
+        r = 1.0 / alpha
+        return float(-nbinom.logpmf(y, r, r / (r + lam)).sum())
+
+    return float(minimize_scalar(nll, bounds=bounds, method="bounded").x)
 
 
 def scoreline_matrix(
@@ -13,8 +40,12 @@ def scoreline_matrix(
     lam_away: np.ndarray | float,
     rho: float = 0.0,
     max_goals: int = config.MAX_GOALS,
+    alpha: float = 0.0,
 ) -> np.ndarray:
     """Dixon-Coles scoreline probability matrices.
+
+    ``alpha`` is the Negative-Binomial dispersion (``Var = lam + alpha * lam**2``);
+    ``alpha = 0`` gives the Poisson marginals.
 
     Parameters
     ----------
@@ -34,8 +65,8 @@ def scoreline_matrix(
     lh = np.atleast_1d(np.asarray(lam_home, dtype=float))
     la = np.atleast_1d(np.asarray(lam_away, dtype=float))
     goals = np.arange(max_goals + 1)
-    ph = poisson.pmf(goals[None, :], lh[:, None])
-    pa = poisson.pmf(goals[None, :], la[:, None])
+    ph = _marginal(goals, lh, alpha)
+    pa = _marginal(goals, la, alpha)
     mat = ph[:, :, None] * pa[:, None, :]
     mat[:, 0, 0] *= np.clip(1.0 - lh * la * rho, 1e-10, None)
     mat[:, 1, 0] *= np.clip(1.0 + la * rho, 1e-10, None)
@@ -78,6 +109,7 @@ def fit_rho(
     home_goals: np.ndarray,
     away_goals: np.ndarray,
     bounds: tuple[float, float] = (-0.3, 0.1),
+    alpha: float = 0.0,
 ) -> float:
     """Maximum-likelihood estimate of the Dixon-Coles ``rho``.
 
@@ -88,7 +120,7 @@ def fit_rho(
     idx = np.arange(len(hg))
 
     def nll(rho: float) -> float:
-        mat = scoreline_matrix(lam_home, lam_away, rho)
+        mat = scoreline_matrix(lam_home, lam_away, rho, alpha=alpha)
         return float(-np.log(mat[idx, hg, ag] + 1e-300).sum())
 
     res = minimize_scalar(nll, bounds=bounds, method="bounded")

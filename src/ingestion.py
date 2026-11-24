@@ -114,7 +114,8 @@ def validate(df: pd.DataFrame) -> None:
 
     for season, g in df.groupby("season"):
         n_teams = len(set(g["home_team"]) | set(g["away_team"]))
-        if n_teams != 20:
+        # a season only just started has not shown all 20 teams yet
+        if n_teams > 20 or (n_teams != 20 and len(g) >= 100):
             raise SchemaError(f"Season {season}: expected 20 teams, found {n_teams}")
 
 
