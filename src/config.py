@@ -124,3 +124,13 @@ EXT_FOULS_MAX: int = 60                               # fouls by one team in one
 EXT_VALUE_RANGE: tuple[float, float] = (1e4, 5e8)     # plausible starting-XI market value (currency units)
 EXT_COVERAGE_MIN_PCT: float = 75.0                    # seasons at least this filled count as "covered"
 EXT_FIRST_SEASON: int = 2012                          # overlap with our base starts here
+
+
+# ----------------------------------------------------------------------------- #
+# API-Football match statistics store (src/xg_api.py); git-ignored (data/external/)
+# ----------------------------------------------------------------------------- #
+EXTERNAL_API_DIR: Path = ROOT / "data" / "external" / "api_football"
+API_FREE_SEASONS: tuple[int, ...] = (2022, 2023, 2024)  # seasons the free plan serves
+API_DAILY_LIMIT: int = 100
+API_MIN_REMAINING: int = 10        # never spend the last requests of the day
+API_SLEEP_SECONDS: float = 6.5     # free plan allows 10 requests/minute

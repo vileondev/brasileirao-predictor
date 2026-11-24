@@ -47,10 +47,11 @@ def _cache_path(path: str, params: dict) -> Path:
     return CACHE_DIR / f"{date.today().isoformat()}_{path.strip('/').replace('/', '-')}_{tag}.json"
 
 
-def api_get(path: str, params: dict | None = None, use_cache: bool = True) -> dict:
+def api_get(path: str, params: dict | None = None, use_cache: bool = True, write_cache: bool = True) -> dict:
     """GET ``path`` with query ``params``; cached per day. Returns the parsed JSON body.
 
     Each network call costs 1 request of the daily budget (``/status`` is free).
+    ``write_cache=False`` skips the per-day cache file (callers with their own store).
     """
     params = params or {}
     cache = _cache_path(path, params)
@@ -71,8 +72,9 @@ def api_get(path: str, params: dict | None = None, use_cache: bool = True) -> di
     except urllib.error.URLError as e:
         raise ApiError(f"network error for {path}: {e.reason}") from None
     body["_remaining_requests"] = remaining
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache.write_text(json.dumps(body))
+    if write_cache or body.get("errors"):
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(body))
     if body.get("errors"):
         raise ApiError(f"API errors for {path}: {body['errors']}")
     return body

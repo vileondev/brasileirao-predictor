@@ -176,6 +176,7 @@ Itens que dependem de **mim** (decisão, conta, dado ou espera).
 - [x] **Enviar os commits ao GitHub** (feito em 24/11/2026; lembrar de repetir o `git push` a cada novo commit, principalmente os das previsões congeladas).
 - [ ] **Depois dos jogos das rodadas 36–38** (24/11 a 02/12/2026): baixar o CSV novo do football-data.co.uk e rodar `python -m src.update`. Ele pontua as 21 previsões congeladas. *Com 21 jogos é só acompanhamento, não conclui nada.*
 - [ ] **Revisar o protocolo** (`docs/PROTOCOLO.md`): cortar, trocar ou acrescentar hipóteses (H1 a H5), tirar o aviso de "RASCUNHO" e commitar. Só vale como pré-registro depois do commit.
+- [ ] **Baixar o xG da API-Football, um pouco por dia** (cota grátis: 100 requisições/dia, uma por jogo). Rodar uma vez por dia, de manhã, e esperar uns 10 minutos: `python -m src.xg_api download --budget 85 --seasons 2024 2023`. É retomável (nunca baixa o mesmo jogo duas vezes); faltam cerca de 8 dias para completar 2023 e 2024 (o xG não existe em 2022 e a API grátis não libera 2025 e 2026). Acompanhar com `python -m src.xg_api report`.
 
 ### Decisões
 - [ ] **Escopo do protocolo:** continuar só com o Brasileirão (precisa de 2027 inteiro, cerca de 400 jogos, e ainda com poder de cerca de 65%) ou aplicar o mesmo protocolo a outras ligas do football-data.co.uk para ganhar poder mais rápido.
