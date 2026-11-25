@@ -15,6 +15,7 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from src import config
@@ -151,3 +152,22 @@ def attach_schedule(remaining: pd.DataFrame, schedule: pd.DataFrame) -> pd.DataF
     """
     out = remaining.merge(schedule, on=["home", "away"], how="left")
     return out.sort_values(["kickoff", "home"], na_position="last").reset_index(drop=True)
+
+
+def load_fd_fixtures(league: "object") -> pd.DataFrame:
+    """Upcoming fixtures of a football-data league from its ``fixtures.csv``.
+
+    Columns match :func:`load_schedule` (``round`` is empty, ``kickoff``, ``home``, ``away``) so
+    :func:`attach_schedule` works for every league. Times are the ones the source publishes.
+    """
+    from src import leagues
+
+    lg = leagues.get(league)  # type: ignore[arg-type]
+    if lg.fixtures_file is None or not lg.fixtures_file.exists():
+        return pd.DataFrame(columns=["round", "kickoff", "home", "away"])
+    df = pd.read_csv(lg.fixtures_file, encoding="utf-8-sig")
+    df = df[df["Div"] == lg.div].copy()
+    when = df["Date"].astype(str) + " " + df["Time"].fillna("15:00").astype(str).str.strip()
+    out = pd.DataFrame({"round": np.nan, "kickoff": pd.to_datetime(when, dayfirst=True),
+                        "home": df["HomeTeam"].astype(str).str.strip(), "away": df["AwayTeam"].astype(str).str.strip()})
+    return out.sort_values(["kickoff", "home"]).reset_index(drop=True)

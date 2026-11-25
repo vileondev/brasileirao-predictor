@@ -17,26 +17,31 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src import baselines, config, evaluate, fixtures, ingestion, predict
+from src import baselines, config, evaluate, fixtures, ingestion, leagues, predict
 
 PRED_DIR: Path = config.ROOT / "predictions"
 MODEL_TAG = "dixon_coles_hl730_ridge0.5"
 
 
-def make_log(matches: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
+def make_log(matches: pd.DataFrame, now: pd.Timestamp | None = None,
+             league: "leagues.League | str | None" = None) -> pd.DataFrame:
     """Predict every unplayed matchup of the latest season using only ``matches``.
 
     Parameters
     ----------
     matches : pd.DataFrame
-        All played matches known at prediction time (from ``ingestion.build_interim``).
+        All played matches known at prediction time (from ``ingestion.build_league``).
     now : pd.Timestamp, optional
         Wall-clock stamp stored in the log (default: now).
+    league : League or str, optional
+        League of the matches (default: Brazil); adds a ``league`` column to the log.
     """
     art = predict.fit_production(matches)
     rem = fixtures.remaining_fixtures(matches)
-    res = predict.predict_fixtures(art, rem)
+    res = predict.predict_fixtures(art, rem, league=league)
     res.insert(0, "season", int(matches["season"].max()))
+    if league is not None:
+        res.insert(0, "league", leagues.get(league).code)
     res["model"] = MODEL_TAG
     res["trained_through"] = art["trained_through"]
     res["predicted_at"] = str(now or pd.Timestamp.now().floor("s"))
@@ -117,16 +122,18 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("action", choices=["log", "score"])
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--league", default="BRA", help="league code: " + ", ".join(sorted(leagues.LEAGUES)))
     args = ap.parse_args()
-    matches = ingestion.build_interim()
+    lg = leagues.get(args.league)
+    matches = ingestion.build_league(lg)
     if args.action == "log":
-        log = make_log(matches)
-        path = save_log(log, force=args.force)
-        print(f"{len(log)} previsoes salvas em {path} (modelo ate {log['trained_through'].iloc[0]})")
+        log = make_log(matches, league=lg)
+        path = save_log(log, lg.pred_dir, force=args.force)
+        print(f"[{lg.code}] {len(log)} previsoes salvas em {path} (modelo ate {log['trained_through'].iloc[0]})")
     else:
-        log = load_logs()
+        log = load_logs(lg.pred_dir)
         if log.empty:
-            print("Nenhuma previsao registrada. Rode: python -m src.forward log")
+            print(f"Nenhuma previsao registrada. Rode: python -m src.forward log --league {lg.code}")
             return
         _report(score_log(log, matches), len(log))
 

@@ -14,50 +14,25 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src import baselines, config, ingestion, probability
+from src import baselines, config, ingestion, leagues, probability
 
-MODEL_FILE: Path = config.MODELS_DIR / "dc_production.json"
+MODEL_FILE: Path = leagues.BRA.model_file  # Brazil default; other leagues use League.model_file
 CANONICAL_TEAMS: frozenset[str] = frozenset(config.TEAM_MAP.values())
 RHO_SEASONS: int = 6  # seasons of out-of-sample predictions used to estimate rho
+ALIASES: dict[str, str] = leagues.BRA_ALIASES  # kept for backward compatibility
+_norm = leagues._norm
 
 
-#: extra spellings seen in other sources (API-Football etc.), normalized form -> canonical
-ALIASES: dict[str, str] = {
-    "vasco da gama": "Vasco", "cr vasco da gama": "Vasco", "rb bragantino": "Bragantino",
-    "red bull bragantino": "Bragantino", "atletico mineiro": "Atletico-MG",
-    "atletico paranaense": "Athletico-PR", "athletico paranaense": "Athletico-PR",
-    "atletico goianiense": "Atletico-GO", "america mineiro": "America-MG",
-    "sport recife": "Sport", "clube do remo": "Remo", "chapecoense sc": "Chapecoense",
-    "botafogo rj": "Botafogo", "flamengo rj": "Flamengo", "gremio fbpa": "Gremio",
-    "fortaleza ec": "Fortaleza",
-}
-
-
-def _norm(name: str) -> str:
-    import re
-    import unicodedata
-    s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
-    return re.sub(r"[^a-z0-9]+", " ", s).strip()
-
-
-def resolve_team(name: str) -> str:
+def resolve_team(name: str, league: "leagues.League | str | None" = None) -> str:
     """Map any known spelling (source, canonical, accents, API-Football) to the canonical name.
 
-    Order: exact source name, normalized canonical/alias match, close fuzzy match.
-    Unknown names are returned unchanged (and later treated as an average team).
+    Without ``league`` the Brazilian map is used. Order: exact source name, normalized
+    canonical/alias match, close fuzzy match. Unknown names are returned unchanged (and later
+    treated as an average team).
     """
-    name = name.strip()
-    if name in config.TEAM_MAP:
-        return config.TEAM_MAP[name]
-    key = _norm(name)
-    table = {_norm(c): c for c in CANONICAL_TEAMS}
-    table.update({_norm(k): v for k, v in config.TEAM_MAP.items()})
-    table.update(ALIASES)
-    if key in table:
-        return table[key]
-    import difflib
-    close = difflib.get_close_matches(key, list(table), n=1, cutoff=0.88)
-    return table[close[0]] if close else name
+    if league is not None and leagues.get(league).code != "BRA":
+        return leagues.resolver(league)(name)
+    return leagues.resolve_name(name, CANONICAL_TEAMS, ALIASES, config.TEAM_MAP)
 
 
 def fit_production(matches: pd.DataFrame, half_life_days: float = 730.0) -> dict:
@@ -100,7 +75,7 @@ def load_artifact(path: Path = MODEL_FILE) -> dict:
     return json.loads(path.read_text())
 
 
-def predict_fixtures(artifact: dict, fixtures: pd.DataFrame) -> pd.DataFrame:
+def predict_fixtures(artifact: dict, fixtures: pd.DataFrame, league: "leagues.League | str | None" = None) -> pd.DataFrame:
     """Predict upcoming fixtures.
 
     Parameters
@@ -109,6 +84,8 @@ def predict_fixtures(artifact: dict, fixtures: pd.DataFrame) -> pd.DataFrame:
         Output of :func:`fit_production` / :func:`load_artifact`.
     fixtures : pd.DataFrame
         Columns ``home`` and ``away`` (team names, any known spelling).
+    league : League or str, optional
+        League whose team spellings are used (default: Brazil).
 
     Returns
     -------
@@ -117,8 +94,9 @@ def predict_fixtures(artifact: dict, fixtures: pd.DataFrame) -> pd.DataFrame:
         ``warning`` column (unknown/new teams are treated as average).
     """
     dc = baselines.DixonColes.from_dict(artifact["model"])
-    df = pd.DataFrame({"home_team": fixtures["home"].map(resolve_team),
-                       "away_team": fixtures["away"].map(resolve_team)})
+    resolve = (lambda n: resolve_team(n, league)) if league is not None else resolve_team
+    df = pd.DataFrame({"home_team": fixtures["home"].map(resolve),
+                       "away_team": fixtures["away"].map(resolve)})
     lh, la = dc.predict(df)
     mat = probability.scoreline_matrix(lh, la, artifact["rho"])
     p = probability.outcome_probs(mat)
@@ -159,21 +137,38 @@ def main() -> None:
                     help="fetch the next fixtures from API-Football (1 request/day, cached)")
     ap.add_argument("--remaining", action="store_true",
                     help="predict every matchup still unplayed this season (no API needed)")
+    ap.add_argument("--next", action="store_true", dest="next_fixtures",
+                    help="predict the upcoming fixtures listed in football-data's fixtures.csv (non-Brazil leagues)")
+    ap.add_argument("--league", default="BRA", help="league code: " + ", ".join(sorted(leagues.LEAGUES)))
     args = ap.parse_args()
+    lg = leagues.get(args.league)
 
-    if args.refit or not MODEL_FILE.exists():
-        matches = ingestion.build_interim()
+    if args.refit or not lg.model_file.exists():
+        matches = ingestion.build_league(lg)
         art = fit_production(matches)
-        save_artifact(art)
-        print(f"Modelo salvo ({art['n_matches']} jogos ate {art['trained_through']}, rho={art['rho']:.3f})")
-    art = load_artifact()
+        save_artifact(art, lg.model_file)
+        print(f"[{lg.code}] Modelo salvo ({art['n_matches']} jogos ate {art['trained_through']}, rho={art['rho']:.3f})")
+    art = load_artifact(lg.model_file)
 
+    if args.next_fixtures:
+        from src import fixtures as api
+        nxt = api.load_fd_fixtures(lg)
+        if nxt.empty:
+            print(f"Nenhum jogo futuro de {lg.code} em {lg.fixtures_file}")
+            return
+        res = predict_fixtures(art, nxt, league=lg)
+        res.insert(0, "kickoff", nxt["kickoff"].dt.strftime("%d/%m %H:%M").to_numpy())
+        print(f"{len(res)} proximos jogos ({lg.name}):")
+        _print(res)
+        return
     if args.remaining:
         from src import fixtures as api
-        rem = api.attach_schedule(api.remaining_fixtures(ingestion.build_interim()), api.load_schedule())
-        res = predict_fixtures(art, rem)
+        played = ingestion.build_league(lg)
+        sched = api.load_schedule() if lg.code == "BRA" else api.load_fd_fixtures(lg)
+        rem = api.attach_schedule(api.remaining_fixtures(played), sched)
+        res = predict_fixtures(art, rem, league=lg)
         res.insert(0, "kickoff", rem["kickoff"].dt.strftime("%d/%m %H:%M").fillna("sem data").to_numpy())
-        print(f"{len(res)} jogos restantes da temporada, em ordem cronologica:")
+        print(f"{len(res)} jogos restantes da temporada ({lg.name}), em ordem cronologica:")
         _print(res)
         return
     if args.upcoming:
@@ -197,7 +192,7 @@ def main() -> None:
         fx = pd.DataFrame({"home": [args.match[0]], "away": [args.match[1]]})
     else:
         return
-    _print(predict_fixtures(art, fx))
+    _print(predict_fixtures(art, fx, league=lg))
 
 
 if __name__ == "__main__":

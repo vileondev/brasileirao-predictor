@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src import config, forward, ingestion, predict
+from src import config, forward, ingestion, leagues, predict
 
 
 def download_raw(url: str = config.RAW_URL, dest: Path = config.RAW_MATCHES_FILE) -> int:
@@ -68,12 +68,18 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--no-download", action="store_true")
     ap.add_argument("--no-log", action="store_true")
+    ap.add_argument("--league", default="BRA", help="league code: " + ", ".join(sorted(leagues.LEAGUES)))
     args = ap.parse_args()
+    lg = leagues.get(args.league)
 
     if not args.no_download:
         try:
-            added = download_raw()
-            print(f"[1/4] Dados atualizados: {added:+d} jogos disputados desde a ultima versao.")
+            if lg.source == "football-data-new":
+                added = download_raw()
+                print(f"[1/4] Dados atualizados: {added:+d} jogos disputados desde a ultima versao.")
+            else:
+                res = leagues.download_football_data(lg)
+                print(f"[1/4] {lg.code}: {len(res['changed'])} arquivo(s) novo(s)/atualizado(s): {', '.join(res['changed']) or '—'}")
         except ingestion.SchemaError as e:
             print(f"[1/4] Arquivo baixado INVALIDO, mantive o atual: {e}\n"
                   "      (se for time novo, acrescente o nome em TEAM_MAP em src/config.py)")
@@ -83,15 +89,15 @@ def main() -> None:
     else:
         print("[1/4] Download pulado.")
 
-    matches = ingestion.build_interim()
+    matches = ingestion.build_league(lg)
     last = matches["kickoff"].max()
-    print(f"      {len(matches)} jogos, ultimo em {last:%d/%m/%Y}.")
+    print(f"      [{lg.code}] {len(matches)} jogos, ultimo em {last:%d/%m/%Y}.")
 
     art = predict.fit_production(matches)
-    predict.save_artifact(art)
-    print(f"[2/4] Modelo reajustado (rho={art['rho']:.3f}) e salvo em models/.")
+    predict.save_artifact(art, lg.model_file)
+    print(f"[2/4] Modelo reajustado (rho={art['rho']:.3f}) e salvo em {lg.model_file.relative_to(config.ROOT)}.")
 
-    logs = forward.load_logs()
+    logs = forward.load_logs(lg.pred_dir)
     print("[3/4] Forward test:")
     if logs.empty:
         print("      nenhuma previsao registrada ainda.")
@@ -101,16 +107,16 @@ def main() -> None:
     if args.no_log:
         print("[4/4] Registro de novas previsoes pulado.")
         return
-    new = new_matchups(forward.make_log(matches))
+    new = new_matchups(forward.make_log(matches, league=lg), lg.pred_dir)
     if new.empty:
         print("[4/4] Nenhum confronto novo para registrar.")
         return
     try:
-        path = forward.save_log(new)
+        path = forward.save_log(new, lg.pred_dir)
     except FileExistsError:
         alt = new.copy()
         alt["predicted_at"] = str(pd.Timestamp.now().floor("s"))
-        path = forward.PRED_DIR / f"{str(alt['predicted_at'].iloc[0])[:10]}_{len(new)}new_remaining.csv"
+        path = lg.pred_dir / f"{str(alt['predicted_at'].iloc[0])[:10]}_{len(new)}new_remaining.csv"
         alt.to_csv(path, index=False)
     print(f"[4/4] {len(new)} novas previsoes registradas em {path.name} (faca commit para fixar o carimbo).")
 

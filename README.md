@@ -29,6 +29,8 @@ Requer Python 3.11+ (desenvolvido em 3.13). Os dados brutos já estão em `data/
 | Prever uma lista (CSV com colunas `home,away`) | `python -m src.predict --fixtures fixtures.csv` |
 | Congelar previsões antes dos jogos | `python -m src.forward log` |
 | Pontuar as previsões congeladas | `python -m src.forward score` |
+| **Outra liga** (padrão: `BRA`) | acrescentar `--league E0` a `update`, `predict`, `forward` e `backtest`. Ligas registradas: `BRA`, `E0` (Premier League), `SP1`, `I1`, `D1`, `F1` (só `BRA` e `E0` têm dados baixados). |
+| Próximos jogos com data (ligas europeias) | `python -m src.update --league E0` e depois `python -m src.predict --league E0 --next` |
 
 Exemplo de saída:
 
@@ -92,6 +94,42 @@ Os **21 jogos que faltam** na Série A 2026, em ordem cronológica. As previsõe
 | Qua, 02/12, 21h30 (rod. 38) | Vasco x Vitória | 51% / 24% / 24% | 1,7–1,1 | 1-1 | 51% | 53% |
 
 Em negrito, as probabilidades de 55% ou mais. O placar mais provável tem só 11% a 14% de chance, então olhe as probabilidades de resultado antes do placar. Esta tabela é uma foto: o resultado de cada jogo entra quando o football-data.co.uk atualizar, e `python -m src.update` mostra como as previsões se saíram.
+
+## Premier League: previsões
+
+O pipeline agora é parametrizado por liga (`src/leagues.py`). A Premier League usa os arquivos do football-data.co.uk de 2012/13 a 2026/27 (5.430 jogos até 23/11/2026) e o mesmo modelo de produção, o **Dixon-Coles**. No backtest walk-forward de 2016 a 2025 ele fica **+0,0080 de RPS atrás das odds de fechamento** (Brasil: +0,0076), então vale a mesma ressalva: é uma estimativa de força recente, e não uma vantagem sobre o mercado.
+
+**Calendário:** o `fixtures.csv` da fonte lista só os jogos dos próximos 2 ou 3 dias, e hoje (25/11/2026) ele não tem nenhum jogo da Premier League. Por isso as previsões abaixo são dos **270 confrontos que ainda faltam na temporada**, sem data, congeladas em [`predictions/E0/2026-11-25_remaining.csv`](predictions/E0/2026-11-25_remaining.csv) antes dos jogos. Quando a próxima rodada aparecer no `fixtures.csv`, rode `python -m src.update --league E0` e `python -m src.predict --league E0 --next` para ver as previsões datadas.
+
+**Força estimada** (índice 1,00 = média da liga; ataque acima de 1 marca mais; defesa abaixo de 1 sofre menos; calculado com os 20 times da temporada 2026/27):
+
+| Time | Ataque | Defesa | | Time | Ataque | Defesa |
+|---|---|---|---|---|---|---|
+| Man City | 1,76 | 0,64 | | Bournemouth | 1,18 | 0,95 |
+| Liverpool | 1,61 | 0,74 | | Leeds | 1,08 | 0,96 |
+| Arsenal | 1,52 | 0,59 | | Coventry | 1,07 | 1,22 |
+| Chelsea | 1,35 | 0,86 | | Nott'm Forest | 1,04 | 0,90 |
+| Newcastle | 1,28 | 0,92 | | Fulham | 1,04 | 0,90 |
+| Brentford | 1,28 | 0,90 | | Crystal Palace | 0,99 | 0,95 |
+| Tottenham | 1,28 | 0,94 | | Everton | 0,93 | 0,85 |
+| Man United | 1,26 | 0,90 | | Ipswich | 0,93 | 1,33 |
+| Brighton | 1,26 | 0,85 | | Hull | 0,92 | 0,75 |
+| Aston Villa | 1,23 | 0,90 | | Sunderland | 0,84 | 0,86 |
+
+**Os 6 maiores favoritos entre os jogos que faltam** (mandante / empate / visitante, e placar mais provável):
+
+| Jogo | 1X2 | Placar mais provável |
+|---|---|---|
+| Arsenal x Ipswich | 83% / 12% / 5% | 2-0 (11,9%) |
+| Liverpool x Ipswich | 82% / 12% / 7% | 3-0 (9,8%) |
+| Ipswich x Man City | 9% / 14% / 78% | 0-2 (10,0%) |
+| Liverpool x Coventry | 76% / 14% / 10% | 2-0 (9,1%) |
+| Man City x Crystal Palace | 74% / 16% / 10% | 2-0 (12,1%) |
+| Ipswich x Arsenal | 10% / 17% / 73% | 0-2 (11,8%) |
+
+**Os 6 jogos mais equilibrados:** Nott'm Forest x Newcastle (37% / 26% / 37%), Crystal Palace x Bournemouth (37% / 26% / 37%), Nott'm Forest x Man United (37% / 26% / 37%), Nott'm Forest x Aston Villa (37% / 27% / 36%), Leeds x Aston Villa (37% / 26% / 38%) e Bournemouth x Brighton (38% / 25% / 37%), todos com o 1-1 como placar mais provável.
+
+Os times promovidos (Ipswich, Coventry e Hull entre eles) têm pouco histórico na elite recente, então o modelo é menos confiável nesses jogos. Ele também não sabe de lesões nem de escalações.
 
 ## Experimentos
 

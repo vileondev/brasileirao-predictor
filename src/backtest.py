@@ -43,24 +43,27 @@ def run_backtest(
     first_val_season: int = config.FIRST_VALIDATION_SEASON,
     block: int = 20,
     half_life_days: float = 730.0,
+    warmup_seasons: tuple[int, ...] = config.WARMUP_SEASONS,
 ) -> pd.DataFrame:
     """Run all baselines walk-forward and return a long table of predictions.
 
     Parameters
     ----------
     matches : pd.DataFrame
-        Clean matches from :func:`src.ingestion.build_interim`.
+        Clean matches from :func:`src.ingestion.build_league`.
     first_val_season : int
         First season to predict; earlier seasons are training only.
     block : int
         Dixon-Coles is refit every ``block`` matches (about two rounds).
     half_life_days : float
         Time-decay half-life of the Dixon-Coles weights.
+    warmup_seasons : tuple of int
+        Seasons that only build state (Elo/DC); the Elo-Poisson parameters are fitted on later seasons.
     """
     elo = baselines.compute_elo(matches)
     m = matches.join(elo)
     out: list[pd.DataFrame] = []
-    train_floor = max(config.WARMUP_SEASONS)
+    train_floor = max(warmup_seasons)
 
     for season in sorted(m["season"].unique()):
         if season < first_val_season:
@@ -118,16 +121,24 @@ def score_table(preds: pd.DataFrame, matches: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    matches = ingestion.build_interim()
-    preds = run_backtest(matches)
+    import argparse
+
+    from src import leagues
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--league", default="BRA", help="league code: " + ", ".join(sorted(leagues.LEAGUES)))
+    lg = leagues.get(ap.parse_args().league)
+    matches = ingestion.build_league(lg)
+    preds = run_backtest(matches, first_val_season=lg.first_validation_season, warmup_seasons=lg.warmup_seasons)
     df = score_table(preds, matches)
-    test = config.TEST_SEASON
+    test = lg.test_season(matches)
     complete = df[df["season"] <= test]
 
     pd.options.display.float_format = "{:.4f}".format
+    print(f"[{lg.code}] {lg.name}")
     print("\n== RPS por temporada (menor = melhor) ==")
     print(df.pivot_table(index="season", columns="model", values="rps").to_string())
-    print(f"\n== Resumo 2016-{test} (walk-forward) ==")
+    print(f"\n== Resumo {lg.first_validation_season}-{test} (walk-forward) ==")
     print(complete.groupby("model")[["rps", "logloss", "brier", "score_ll"]].mean().sort_values("rps").to_string())
     print(f"\n== Teste {test} ==")
     print(df[df["season"] == test].groupby("model")[["rps", "logloss", "brier", "score_ll"]].mean().sort_values("rps").to_string())
