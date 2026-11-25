@@ -1,0 +1,70 @@
+{
+ "source": "https://football-data.co.uk/mmz4281/YYZZ/E0.csv and /fixtures.csv",
+ "downloaded": "2026-11-24",
+ "files": {
+  "E0_1213.csv": {
+   "bytes": 113085,
+   "sha256": "1df561d34a9b79ff8cb1fccd4fd279d183e74cd871063a307ecf18f01e0d622f"
+  },
+  "E0_1314.csv": {
+   "bytes": 103642,
+   "sha256": "3cf16078fde2e0e6c6cb07ebdb20ca98d1a755c9508a18bbeb4ad6837fad2b42"
+  },
+  "E0_1415.csv": {
+   "bytes": 100899,
+   "sha256": "76b7858051ff6b17f46f49f26fdc70c1f29537270492606f5cc63d67fad5d149"
+  },
+  "E0_1516.csv": {
+   "bytes": 100656,
+   "sha256": "bd3502a18c38a1597fd9af62e2366b4015006d3528dd4d18b311bd6237bbc085"
+  },
+  "E0_1617.csv": {
+   "bytes": 99990,
+   "sha256": "9625a7652b5f98fbd3e2e4d378c851fc246693f3343e34a72428d5b6e864d3e0"
+  },
+  "E0_1718.csv": {
+   "bytes": 100734,
+   "sha256": "4f3389365ef3f7ac966764ed8ba67cf3b79f5aebed18dd224099c4b2c98bc67b"
+  },
+  "E0_1819.csv": {
+   "bytes": 96144,
+   "sha256": "7c096b3c2ecd54c6993d22eeea73450c2bde11e3457238b226b8f43c62dfc35e"
+  },
+  "E0_1920.csv": {
+   "bytes": 175475,
+   "sha256": "100037618b94f94057400bb02bf6bac4ef74ddaa58cde4b38370839c39caee61"
+  },
+  "E0_2021.csv": {
+   "bytes": 175815,
+   "sha256": "5afe63f69401457b8354eaacee24f9a3e520b3c3af6329564a9783e20d789c62"
+  },
+  "E0_2122.csv": {
+   "bytes": 175363,
+   "sha256": "335afcbabeb2939fa10ab39ba3e8215072d0b577cb8d0705c1e44c56e934e703"
+  },
+  "E0_2223.csv": {
+   "bytes": 176180,
+   "sha256": "8442792d3b614c94ea3cf381bd2736805889cc1713169035368fff19c3d02380"
+  },
+  "E0_2324.csv": {
+   "bytes": 172196,
+   "sha256": "b2e057b0ed959f198b0f63d2391c01239f3608e6de5db68edab3f88e04d07ff3"
+  },
+  "E0_2425.csv": {
+   "bytes": 197110,
+   "sha256": "d0c8ce4a96d886cf60cf101f570f4a3893844226f91c7bd769eb568c49edbfa4"
+  },
+  "E0_2526.csv": {
+   "bytes": 203438,
+   "sha256": "3e3a8352f9ada6789c508d6ca184424421fed56a30400904a4a327c583407e62"
+  },
+  "E0_2627.csv": {
+   "bytes": 53914,
+   "sha256": "21d2b96792bd0bc8a324123ae68eaf60b981c5a016c538d086e8d8a5cbedd95a"
+  },
+  "fixtures.csv": {
+   "bytes": 12842,
+   "sha256": "09b5cca1b8029ed7f1e89bba82c3c609c27d397a7cc62fb60aea62b81c39a2b1"
+  }
+ }
+}

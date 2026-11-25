@@ -1,0 +1,2 @@
+# keep downloaded data byte-for-byte (hashes in MANIFEST.json / CLAUDE.md refer to the original bytes)
+data/external/** -text
