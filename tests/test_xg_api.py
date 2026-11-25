@@ -96,3 +96,27 @@ def test_parse_store_and_coverage(store: Path) -> None:
     cov = xg_api.coverage(df)
     assert int(cov.loc[2024, "com_xg"]) == 6 and cov.loc[2024, "pct_xg"] == pytest.approx(50.0)
     assert np.isfinite(df["shots_h"]).all()
+
+
+def _injury_body() -> dict:
+    mk = lambda pid, name, typ, reason, fid, team: {
+        "player": {"id": pid, "name": name, "type": typ, "reason": reason}, "team": {"name": team},
+        "fixture": {"id": fid, "date": "2024-08-16T19:00:00+00:00"}}
+    return {"response": [mk(1, "A. One", "Missing Fixture", "Knee Injury", 10, "Manchester United"),
+                         mk(2, "B. Two", "Questionable", "Muscle Injury", 10, "Fulham"),
+                         mk(1, "A. One", "Missing Fixture", "Knee Injury", 10, "Manchester United")]}  # duplicate row
+
+
+def test_fetch_injuries_is_idempotent_and_parsed(tmp_path: Path) -> None:
+    calls: list[dict] = []
+
+    def fake(path: str, params: dict, **kw: object) -> dict:
+        calls.append(params)
+        return _injury_body()
+
+    assert xg_api.fetch_injuries(39, 2024, tmp_path, fetch=fake) is True
+    assert xg_api.fetch_injuries(39, 2024, tmp_path, fetch=fake) is False  # second call costs nothing
+    assert calls == [{"league": 39, "season": 2024}]
+    inj = xg_api.load_injuries(39, 2024, tmp_path)
+    assert len(inj) == 2 and set(inj["type"]) == {"Missing Fixture", "Questionable"}
+    assert inj["date"].dtype.kind == "M" and (inj["fixture_id"] == 10).all()

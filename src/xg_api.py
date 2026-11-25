@@ -148,9 +148,49 @@ def coverage(df: pd.DataFrame) -> pd.DataFrame:
         pct_xg=lambda t: t["com_xg"] / t["baixados"] * 100)
 
 
+def injuries_path(league: int, season: int, store: Path = config.EXTERNAL_API_DIR) -> Path:
+    """Location of the stored ``/injuries`` response of one league-season."""
+    return store / f"injuries_{league}_{season}.json"
+
+
+def fetch_injuries(league: int, season: int, store: Path = config.EXTERNAL_API_DIR,
+                   fetch: Callable[..., dict] = fixtures.api_get) -> bool:
+    """Store the injury/suspension list of a league-season (1 request; skipped if already stored).
+
+    Returns
+    -------
+    bool
+        ``True`` if a request was made, ``False`` if the file already existed.
+    """
+    path = injuries_path(league, season, store)
+    if path.exists():
+        return False
+    body = fetch("/injuries", {"league": league, "season": season}, use_cache=False, write_cache=False)
+    store.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(body), encoding="utf-8")
+    return True
+
+
+def load_injuries(league: int, season: int, store: Path = config.EXTERNAL_API_DIR) -> pd.DataFrame:
+    """One row per (fixture, player) listed as ``Missing Fixture`` or ``Questionable``.
+
+    Notes
+    -----
+    The API does not say *when* each entry was added, so it cannot be assumed to be
+    known before kickoff: use it for research, not as a leak-free pre-match feature.
+    """
+    body = json.loads(injuries_path(league, season, store).read_text(encoding="utf-8"))
+    rows = [{"fixture_id": r["fixture"]["id"],
+             "date": pd.to_datetime(r["fixture"]["date"]).tz_convert("UTC").tz_localize(None),
+             "team": predict.resolve_team(r["team"]["name"]), "player_id": r["player"]["id"], "player": r["player"]["name"],
+             "type": r["player"].get("type"), "reason": r["player"].get("reason")} for r in body.get("response", [])]
+    return pd.DataFrame(rows).drop_duplicates(["fixture_id", "player_id"]).reset_index(drop=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("action", choices=["probe", "download", "report"])
+    ap.add_argument("action", choices=["probe", "download", "report", "injuries"])
+    ap.add_argument("--league", type=int, default=39, help="league id for the injuries action (71 = Serie A, 39 = Premier League)")
     ap.add_argument("--n", type=int, default=8, help="matches per season for the probe")
     ap.add_argument("--budget", type=int, default=60, help="max requests for this run")
     ap.add_argument("--seasons", type=int, nargs="+", default=[2024, 2023, 2022])
@@ -160,6 +200,12 @@ def main() -> None:
     if args.action == "report":
         df = parse_store()
         print(coverage(df).to_string() if len(df) else "nada baixado ainda")
+        return
+    if args.action == "injuries":
+        for s in args.seasons:
+            spent = fetch_injuries(args.league, s)
+            inj = load_injuries(args.league, s)
+            print(f"liga {args.league} {s}: {len(inj)} registros, {inj.fixture_id.nunique()} jogos ({'1 requisicao' if spent else 'ja estava salvo'})")
         return
     ids: list[int] = []
     for s in args.seasons:
